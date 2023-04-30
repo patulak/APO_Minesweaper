@@ -105,6 +105,7 @@ int main(int argc, char *argv[]) {
  
   parlcd_write_cmd(parlcd_mem_base, 0x2c);
   ptr=0;
+  //init screen buffer
   for (i = 0; i < 320 ; i++) {
     for (j = 0; j < 480 ; j++) {
       c = 0;
@@ -118,31 +119,34 @@ int main(int argc, char *argv[]) {
   loop_delay.tv_nsec = 150 * 1000 * 1000;
   int xx=0, yy=0;
   while (1) {
- 
+    //get knobs data
     int r = *(volatile uint32_t*)(mem_base + SPILED_REG_KNOBS_8BIT_o);
     if ((r&0x7000000)!=0) {
       break;
     }
+    //some magic to make them xx and yy
     xx = ((r&0xff)*480)/256;
     yy = (((r>>8)&0xff)*320)/256;
- 
+    //clear screen
     for (ptr = 0; ptr < 320*480 ; ptr++) {
         fb[ptr]=0u;
     }
+    //draw square on xx, yy
     for (j=0; j<60; j++) {
       for (i=0; i<60; i++) {
         draw_pixel(i+xx,j+yy,0x7ff);
       }
     }
- 
+    //draw buffer to screen
     parlcd_write_cmd(parlcd_mem_base, 0x2c);
     for (ptr = 0; ptr < 480*320 ; ptr++) {
         parlcd_write_data(parlcd_mem_base, fb[ptr]);
     }
- 
+    //wait for another loop
     clock_nanosleep(CLOCK_MONOTONIC, 0, &loop_delay, NULL);
   }
  
+ //clear screen
   parlcd_write_cmd(parlcd_mem_base, 0x2c);
   for (ptr = 0; ptr < 480*320 ; ptr++) {
     parlcd_write_data(parlcd_mem_base, 0);
