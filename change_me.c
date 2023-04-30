@@ -25,7 +25,58 @@
 #include "mzapo_regs.h"
  
 unsigned short *fb;
- 
+
+int get_knobs(void){
+    int * knobs = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_KNOBS_8BIT_o);
+    return *knobs;
+}
+
+void set_rgb1(int val, int select){
+    int * rgb1 = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB1_o);
+    int * rgb2 = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB2_o);
+    if(select & 0x1){
+        *rgb1 = val;
+    }
+    if(select & 0x2){
+        *rgb2 = val;
+    }
+}
+
+int pready(){
+    char *state = (char*)(SERIAL_PORT_BASE + SERP_TX_ST_REG_o);
+    return (*state & SERP_TX_ST_REG_READY_m);
+}
+
+void pchar(char c){
+    char *data = (char*)(SERIAL_PORT_BASE + SERP_TX_DATA_REG_o);
+    while(!pready());
+    *data = c;
+}
+
+int gready(){
+    char *state = (char*)(SERIAL_PORT_BASE + SERP_RX_ST_REG_o);
+    return (*state & SERP_RX_ST_REG_READY_m);
+}
+
+char gchar(void){
+    char *data = (char*)(SERIAL_PORT_BASE + SERP_RX_DATA_REG_o);
+    while(!gready());
+    return *data;
+}
+
+union pixel{
+    uint16_t d;
+    struct
+    {
+        int b : 5;
+        int g : 6;
+        int r : 5;
+    };
+};
+
+
+
+
 void draw_pixel(int x, int y, unsigned short color) {
   if (x>=0 && x<480 && y>=0 && y<320) {
     fb[x+480*y] = color;

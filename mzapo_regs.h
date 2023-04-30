@@ -40,6 +40,22 @@
 #define SPILED_REG_KBDRD_KNOBS_DIRECT_o 0x020
 #define SPILED_REG_KNOBS_8BIT_o         0x024
 
+/* Console related registers*/
+
+#define SERIAL_PORT_BASE   0xffffc000
+
+#define SERP_RX_ST_REG_o           0x00
+#define SERP_RX_ST_REG_READY_m      0x1
+#define SERP_RX_ST_REG_IE_m         0x2
+
+#define SERP_RX_DATA_REG_o         0x04
+
+#define SERP_TX_ST_REG_o           0x08
+#define SERP_TX_ST_REG_READY_m      0x1
+#define SERP_TX_ST_REG_IE_m         0x2
+
+#define SERP_TX_DATA_REG_o         0x0c
+
 /* Parallel LCD registers */
 
 #define PARLCD_REG_BASE_PHYS  0x43c00000
