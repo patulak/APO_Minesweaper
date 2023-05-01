@@ -26,46 +26,60 @@
  
 unsigned short *fb;
 
-int get_knobs(void){
+int get_knobs(void){ //int 0-256 
     int * knobs = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_KNOBS_8BIT_o);
     return *knobs;
 }
 
-void set_rgb1(int val, int select){
-    int * rgb1 = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB1_o);
-    int * rgb2 = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB2_o);
-    if(select & 0x1){
-        *rgb1 = val;
+int get_knob_change(int *lastRotation){ //-1: left, 0: same, 1: right
+    int currentRotation = get_knobs();
+    if(currentRotation - (*lastRotation) > 3){
+        (*lastRotation) += 4;
+        return 1;
     }
-    if(select & 0x2){
-        *rgb2 = val;
+    else if(currentRotation - (*lastRotation) > -3 &&currentRotation - (*lastRotation) < -200){ //testValue
+        (*lastRotation) -= 4;
+        return -1;
+    }
+    else{
+        return 0;
     }
 }
 
-int pready(){
+void set_rgb1(int val){
+    int * rgb1 = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB1_o);
+    *rgb1 = val;
+}
+
+void set_rgb2(int val){
+    int * rgb2 = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB2_o);
+    *rgb2 = val;
+}
+
+int pready(){ //write ready
     char *state = (char*)(SERIAL_PORT_BASE + SERP_TX_ST_REG_o);
     return (*state & SERP_TX_ST_REG_READY_m);
 }
 
-void pchar(char c){
+void pchar(char c){ //write to console
     char *data = (char*)(SERIAL_PORT_BASE + SERP_TX_DATA_REG_o);
     while(!pready());
     *data = c;
 }
 
-int gready(){
+int gready(){ //read ready
     char *state = (char*)(SERIAL_PORT_BASE + SERP_RX_ST_REG_o);
     return (*state & SERP_RX_ST_REG_READY_m);
 }
 
-char gchar(void){
+char gchar(void){ //read from console
     char *data = (char*)(SERIAL_PORT_BASE + SERP_RX_DATA_REG_o);
     while(!gready());
     return *data;
 }
 
 union pixel{
-    uint16_t d;
+    unsigned short d; //uint16_t d;
     struct
     {
         int b : 5;
@@ -89,6 +103,7 @@ int main(int argc, char *argv[]) {
   int i,j;
   int ptr;
   unsigned int c;
+  int lastRotation = get_knobs();
   fb  = (unsigned short *)malloc(320*480*2);
  
   printf("Hello world\n");
@@ -119,6 +134,19 @@ int main(int argc, char *argv[]) {
   loop_delay.tv_nsec = 150 * 1000 * 1000;
   int xx=0, yy=0;
   while (1) {
+
+    //test Aretation
+    int change = get_knob_change(&lastRotation);
+    if(change != 0){
+        printf("Change: %d", change);
+    }
+
+
+
+
+
+
+
     //get knobs data
     int r = *(volatile uint32_t*)(mem_base + SPILED_REG_KNOBS_8BIT_o);
     if ((r&0x7000000)!=0) {

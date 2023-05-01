@@ -9,9 +9,9 @@ LDFLAGS += -static
 LDLIBS += -lrt -lpthread
 #LDLIBS += -lm
 
-SOURCES = change_me.c mzapo_phys.c mzapo_parlcd.c serialize_lock.c
+SOURCES = main.c mzapo_phys.c mzapo_parlcd.c serialize_lock.c
 SOURCES += font_prop14x16.c font_rom8x16.c
-TARGET_EXE = change_me
+TARGET_EXE = main
 TARGET_IP ?= 192.168.223.149 #change this
 ifeq ($(TARGET_IP),)
 ifneq ($(filter debug run,$(MAKECMDGOALS)),)
