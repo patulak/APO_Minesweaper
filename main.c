@@ -26,12 +26,13 @@
  
 unsigned short *fb;
 
-int get_knobs(void){ //int 0-256 
+int get_knobs(void){ //returns 24bits of information (3* 8 bits) = (3* value [0-256]) 
     int * knobs = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_KNOBS_8BIT_o);
     return *knobs;
 }
 
 int get_knob_change(int *lastRotation){ //-1: left, 0: same, 1: right
+  //remake this function, use mask to get specific knob, then process its rotation change relative to its last rotation
     int currentRotation = get_knobs();
     if(currentRotation - (*lastRotation) > 3){
         (*lastRotation) += 4;
