@@ -23,28 +23,62 @@
 #include "mzapo_parlcd.h"
 #include "mzapo_phys.h"
 #include "mzapo_regs.h"
+#include "serialize_lock.h"
  
 unsigned short *fb;
 
-int get_knobs(void){ //returns 24bits of information (3* 8 bits) = (3* value [0-256]) 
-    int * knobs = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_KNOBS_8BIT_o);
+typedef struct{
+    int red_change;
+    int blue_change;
+    int green_change;
+}rotation_t;
+
+int get_knobs(unsigned char *mem_base){ //int 0-256 
+    int * knobs = (int*)(mem_base + SPILED_REG_KNOBS_8BIT_o);
     return *knobs;
 }
 
-int get_knob_change(int *lastRotation){ //-1: left, 0: same, 1: right
-  //remake this function, use mask to get specific knob, then process its rotation change relative to its last rotation
-    int currentRotation = get_knobs();
-    if(currentRotation - (*lastRotation) > 3){
-        (*lastRotation) += 4;
-        return 1;
+rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base){ //-1: left, 0: same, 1: right
+    rotation_t result;
+    int currentRotation = get_knobs(mem_base);
+
+    
+    int value = (currentRotation>>16)&0xff;
+    int oldValue = ((*lastRotation)>>16)&0xff;
+    result.green_change = 0;
+    if (value - oldValue > 3){
+        result.green_change = 1;
+        (*lastRotation) += (4);
     }
-    else if(currentRotation - (*lastRotation) > -3 &&currentRotation - (*lastRotation) < -200){ //testValue
-        (*lastRotation) -= 4;
-        return -1;
+    if(oldValue - value > 3){
+        result.green_change = -1;
+        (*lastRotation) -= (4);
     }
-    else{
-        return 0;
+
+    value = (currentRotation>>8)&0xff;
+    oldValue = ((*lastRotation)>>8)&0xff;
+    result.blue_change = 0;
+    if (value - oldValue > 3){
+        result.blue_change = 1;
+        (*lastRotation) += (4)<<8;
     }
+    if(oldValue - value > 3){
+        result.blue_change = -1;
+        (*lastRotation) -= (4)<<8;
+    }
+
+    value = currentRotation&0xff;
+    oldValue = (*lastRotation)&0xff;
+    result.red_change = 0;
+    if (value - oldValue > 3){
+        result.red_change = 1;
+        (*lastRotation) += (4)<<16;
+    }
+    if(oldValue - value > 3){
+        result.red_change = -1;
+        (*lastRotation) -= (4)<<16;
+    }
+    return result;
 }
 
 void set_rgb1(int val){
@@ -97,14 +131,36 @@ void draw_pixel(int x, int y, unsigned short color) {
     fb[x+480*y] = color;
   }
 }
- 
- 
+
+void draw_square(int startX, int startY, int width, int height, unsigned short color){
+    for (int j=0; j<height; j++) {
+      for (int i=0; i<width; i++) {
+        //if(i+startX > 0 && i+startX < 480 && j+startY > 0 && j+startY < 320){
+        draw_pixel(i+startX, j+startY, color);
+        //}
+      }
+    }
+}
+
+
 int main(int argc, char *argv[]) {
+    if (serialize_lock(1) <= 0) {
+    printf("System is occupied\n");
+
+    if (1) {
+      printf("Waitting\n");
+      /* Wait till application holding lock releases it or exits */
+      serialize_lock(0);
+    }
+  }
+
+
+
   unsigned char *parlcd_mem_base, *mem_base;
   int i,j;
   int ptr;
   unsigned int c;
-  int lastRotation = get_knobs();
+  
   fb  = (unsigned short *)malloc(320*480*2);
  
   printf("Hello world\n");
@@ -130,42 +186,51 @@ int main(int argc, char *argv[]) {
     }
   }
  
+  int lastRotation = get_knobs(mem_base);
+
   struct timespec loop_delay;
   loop_delay.tv_sec = 0;
   loop_delay.tv_nsec = 150 * 1000 * 1000;
-  int xx=0, yy=0;
+  //int xx=0, yy=0;
   while (1) {
 
     //test Aretation
-    int change = get_knob_change(&lastRotation);
-    if(change != 0){
-        printf("Change: %d", change);
+    rotation_t change = get_knob_change(&lastRotation, mem_base); //1, 2, 3 for R G B knobs
+    if(change.green_change != 0 && change.blue_change != 0 && change.red_change != 0){
+        printf("Change: %d %d %d", change.red_change, change.blue_change, change.green_change);
+        fflush(stdout);
     }
-
-
-
-
-
 
 
     //get knobs data
-    int r = *(volatile uint32_t*)(mem_base + SPILED_REG_KNOBS_8BIT_o);
+    /*int r = *(volatile uint32_t*)(mem_base + SPILED_REG_KNOBS_8BIT_o);
     if ((r&0x7000000)!=0) {
       break;
-    }
+    }*/
     //some magic to make them xx and yy
-    xx = ((r&0xff)*480)/256;
-    yy = (((r>>8)&0xff)*320)/256;
+    /*xx = ((r&0xff)*480)/256;
+    yy = (((r>>8)&0xff)*320)/256;*/
     //clear screen
     for (ptr = 0; ptr < 320*480 ; ptr++) {
         fb[ptr]=0u;
     }
-    //draw square on xx, yy
-    for (j=0; j<60; j++) {
-      for (i=0; i<60; i++) {
-        draw_pixel(i+xx,j+yy,0x7ff);
-      }
+    //draw square on x, y
+
+    for(int vert = 0; vert < 5*20; vert+=20){
+        for(int horz = 0; horz < 5*20; horz+=20){
+            if((horz+vert) % 40 == 0){
+                draw_square(vert, horz, 20, 20, 0x7ff);
+                //printf("Wh %d, %d ", vert, horz);
+            }
+            else{
+                draw_square(vert, horz, 20, 20, 0x0f0);
+                //printf("BL %d, %d ", vert, horz);
+            }
+        }
     }
+    //printf("\n");
+    //fflush(stdout);
+    
     //draw buffer to screen
     parlcd_write_cmd(parlcd_mem_base, 0x2c);
     for (ptr = 0; ptr < 480*320 ; ptr++) {
@@ -182,6 +247,7 @@ int main(int argc, char *argv[]) {
   }
  
   printf("Goodbye world\n");
+  serialize_unlock();
  
   return 0;
 }
