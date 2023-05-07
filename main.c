@@ -104,11 +104,6 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
     return result;
 }
 
-void blue_knob()
-{
-
-}
-
 void set_rgb1(int val)
 {
     int * rgb1 = (int*)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB1_o);
