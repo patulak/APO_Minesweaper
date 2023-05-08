@@ -75,36 +75,36 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
     if (red_difference > 3)
     {
       result.red_change = 1;
-      *lastRotation += (red_difference / 4);
+      *lastRotation += (red_difference / 4) >> 16;
     }
-    else if (red_difference < 3)
+    else if (red_difference < -3)
     {
       result.red_change = -1;
-      *lastRotation -= (red_difference / 4);
+      *lastRotation -= (red_difference / 4) >> 16;
     }
 
     //Green knob
     if (green_difference > 3)
     {
       result.green_change = 1;
-      *lastRotation += (green_difference / 4);
+      *lastRotation += (green_difference / 4) >> 8;
     }
-    else if (green_difference < 3)
+    else if (green_difference < -3)
     {
       result.green_change = -1;
-      *lastRotation -= (green_difference / 4);
+      *lastRotation -= (green_difference / 4) >> 8;
     }
 
     //Blue knob
     if (blue_difference > 3)
     {
       result.blue_change = 1;
-      *lastRotation += (blue_difference / 4);
+      *lastRotation += (blue_difference / 4) >> 0;
     }
-    else if (blue_difference < 3)
+    else if (blue_difference < -3)
     {
       result.blue_change = -1;
-      *lastRotation -= (green_difference / 4);
+      *lastRotation -= (blue_difference / 4) >> 0;
     }
 
     return result;
