@@ -63,48 +63,104 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
     knob_value.green_value = (currentRotation >> 8) & 0xff; //Current position
     knob_value.blue_value = (currentRotation >> 0) & 0xff; //Current position
 
-    int red_difference = red_value - knob_value.red_value;
-    int green_difference = green_value - knob_value.green_value;
-    int blue_difference = blue_value - knob_value.blue_value;
-
     result.red_change = 0;
     result.green_change = 0;
     result.blue_change = 0;
 
     //Red knob
-    if (red_difference > 3)
+    if (knob_value.red_value > red_value)
     {
-      result.red_change = 1;
-      *lastRotation += (red_difference / 4) >> 16;
+      if ((knob_value.red_value - red_value) <= 128)
+      {
+        result.red_change = 1;
+        *lastRotation += (4) >> 16;
+      }
+      else
+      {
+        result.red_change = -1;
+        *lastRotation -= (4) >> 16;
+      }
     }
-    else if (red_difference < -3)
+    else if (knob_value.red_value < red_value)
     {
-      result.red_change = -1;
-      *lastRotation -= (red_difference / 4) >> 16;
+      if ((red_value - knob_value.red_value) <= 128)
+      {
+        result.red_change = -1;
+        *lastRotation -= (4) >> 16;
+      }
+      else
+      {
+        result.red_change = 1;
+        *lastRotation += (4) >> 16;
+      }
+    }
+    else
+    {
+      result.red_change = 0;
     }
 
     //Green knob
-    if (green_difference > 3)
+    if (knob_value.green_value > green_value)
     {
-      result.green_change = 1;
-      *lastRotation += (green_difference / 4) >> 8;
+      if ((knob_value.green_value - green_value) <= 128)
+      {
+        result.green_change = 1;
+        *lastRotation += (4) >> 8;
+      }
+      else
+      {
+        result.green_change = -1;
+        *lastRotation -= (4) >> 8;
+      }
     }
-    else if (green_difference < -3)
+    else if (knob_value.green_value < green_value)
     {
-      result.green_change = -1;
-      *lastRotation -= (green_difference / 4) >> 8;
+      if ((green_value - knob_value.green_value) <= 128)
+      {
+        result.green_change = -1;
+        *lastRotation -= (4) >> 8;
+      }
+      else
+      {
+        result.green_change = 1;
+        *lastRotation += (4) >> 8;
+      }
+    }
+    else
+    {
+      result.green_change = 0;
     }
 
     //Blue knob
-    if (blue_difference > 3)
+    if (knob_value.blue_value > blue_value)
     {
-      result.blue_change = 1;
-      *lastRotation += (blue_difference / 4) >> 0;
+      if ((knob_value.blue_value - blue_value) <= 128)
+      {
+        result.blue_change = 1;
+        *lastRotation += (4) >> 0;
+      }
+      else
+      {
+        result.blue_change = -1;
+        *lastRotation -= (4) >> 0;
+      }
     }
-    else if (blue_difference < -3)
+    else if (knob_value.blue_value < blue_value)
     {
-      result.blue_change = -1;
-      *lastRotation -= (blue_difference / 4) >> 0;
+      if ((blue_value - knob_value.blue_value) <= 128)
+      {
+        result.blue_change = -1;
+        *lastRotation -= (4) >> 0;
+      }
+      else
+      {
+        result.blue_change = 1;
+        *lastRotation += (4) >> 0;
+      }
+    }
+    else
+    {
+      result.blue_change = 0;
     }
 
     return result;
