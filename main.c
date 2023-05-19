@@ -28,6 +28,7 @@
 //#include "font_prop14x16.c"
 #include "font_types.h"
 #include "serialize_lock.h"
+#include "queue.h"
 
 unsigned short *fb;
 
@@ -43,8 +44,11 @@ typedef struct
 typedef struct
 {
     int red_change;
-    int blue_change;
     int green_change;
+    int blue_change;
+    bool red_pressed;
+    bool green_pressed;
+    bool blue_pressed;
 } rotation_t;
 
 typedef struct
@@ -113,6 +117,56 @@ void generate(mines *m){
             }
         }
     }
+}
+
+void reveal(mines m){
+    /*playground[maxY-1-buttonY][buttonX][1] = 1
+        if playground[maxY-1-buttonY][buttonX][0] == 0:
+            uncover = [[maxY-1-buttonY, buttonX]]
+            while len(uncover) > 0:
+                i = uncover[0][0]
+                j = uncover[0][1]
+                if i != 0:
+                    if playground[i-1][j][0] == 0 and playground[i-1][j][1] == 0:
+                        if [i - 1, j] not in uncover:
+                            uncover.append([i - 1, j])
+                    playground[i - 1][j][1] = 1
+                if i != maxX-1:
+                    if playground[i+1][j][0] == 0 and playground[i+1][j][1] == 0:
+                        if [i + 1, j] not in uncover:
+                            uncover.append([i + 1, j])
+                    playground[i + 1][j][1] = 1
+                if j != 0:
+                    if playground[i][j-1][0] == 0 and playground[i][j-1][1] == 0:
+                        if [i, j - 1] not in uncover:
+                            uncover.append([i, j - 1])
+                    playground[i][j - 1][1] = 1
+                if j != maxY-1:
+                    if playground[i][j+1][0] == 0 and playground[i][j+1][1] == 0:
+                        if [i, j + 1] not in uncover:
+                            uncover.append([i, j + 1])
+                    playground[i][j + 1][1] = 1
+                if i != 0 and j != 0:
+                    if playground[i-1][j-1][0] == 0 and playground[i-1][j-1][1] == 0:
+                        if [i - 1, j - 1] not in uncover:
+                            uncover.append([i - 1, j - 1])
+                    playground[i - 1][j - 1][1] = 1
+                if i != 0 and j != maxY-1:
+                    if playground[i-1][j+1][0] == 0 and playground[i-1][j+1][1] == 0:
+                        if [i - 1, j + 1] not in uncover:
+                            uncover.append([i - 1, j + 1])
+                    playground[i - 1][j + 1][1] = 1
+                if i != maxX-1 and j != 0:
+                    if playground[i+1][j-1][0] == 0 and playground[i+1][j-1][1] == 0:
+                        if [i + 1, j - 1] not in uncover:
+                            uncover.append([i + 1, j - 1])
+                    playground[i + 1][j - 1][1] = 1
+                if i != maxX-1 and j != maxY-1:
+                    if playground[i+1][j+1][0] == 0 and playground[i+1][j+1][1] == 0:
+                        if [i + 1, j + 1] not in uncover:
+                            uncover.append([i + 1, j + 1])
+                    playground[i + 1][j + 1][1] = 1
+                uncover.pop(0)*/
 }
 
 void draw_pixel(int x, int y, unsigned short color)
@@ -225,6 +279,7 @@ int get_knobs(unsigned char *mem_base)
 
 rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: left, 0: same, 1: right
 { 
+    /*TODO: rotations and buttons*/
     rotation_t result;
     knob_value knob_value;
 
