@@ -35,7 +35,7 @@ unsigned short *fb;
 typedef struct
 {
     int *data; //0 - 8 bomb count, -1 bomb, -2 flag
-    bool *revealed;
+    int *revealed; //0 hidden, 1 revealed, 2 flag
     int selectedX;
     int selectedY;
     int score;
@@ -119,54 +119,58 @@ void generate(mines *m){
     }
 }
 
-void reveal(mines m){
-    /*playground[maxY-1-buttonY][buttonX][1] = 1
-        if playground[maxY-1-buttonY][buttonX][0] == 0:
-            uncover = [[maxY-1-buttonY, buttonX]]
-            while len(uncover) > 0:
-                i = uncover[0][0]
-                j = uncover[0][1]
-                if i != 0:
-                    if playground[i-1][j][0] == 0 and playground[i-1][j][1] == 0:
-                        if [i - 1, j] not in uncover:
-                            uncover.append([i - 1, j])
-                    playground[i - 1][j][1] = 1
-                if i != maxX-1:
-                    if playground[i+1][j][0] == 0 and playground[i+1][j][1] == 0:
-                        if [i + 1, j] not in uncover:
-                            uncover.append([i + 1, j])
-                    playground[i + 1][j][1] = 1
-                if j != 0:
-                    if playground[i][j-1][0] == 0 and playground[i][j-1][1] == 0:
-                        if [i, j - 1] not in uncover:
-                            uncover.append([i, j - 1])
-                    playground[i][j - 1][1] = 1
-                if j != maxY-1:
-                    if playground[i][j+1][0] == 0 and playground[i][j+1][1] == 0:
-                        if [i, j + 1] not in uncover:
-                            uncover.append([i, j + 1])
-                    playground[i][j + 1][1] = 1
-                if i != 0 and j != 0:
-                    if playground[i-1][j-1][0] == 0 and playground[i-1][j-1][1] == 0:
-                        if [i - 1, j - 1] not in uncover:
-                            uncover.append([i - 1, j - 1])
-                    playground[i - 1][j - 1][1] = 1
-                if i != 0 and j != maxY-1:
-                    if playground[i-1][j+1][0] == 0 and playground[i-1][j+1][1] == 0:
-                        if [i - 1, j + 1] not in uncover:
-                            uncover.append([i - 1, j + 1])
-                    playground[i - 1][j + 1][1] = 1
-                if i != maxX-1 and j != 0:
-                    if playground[i+1][j-1][0] == 0 and playground[i+1][j-1][1] == 0:
-                        if [i + 1, j - 1] not in uncover:
-                            uncover.append([i + 1, j - 1])
-                    playground[i + 1][j - 1][1] = 1
-                if i != maxX-1 and j != maxY-1:
-                    if playground[i+1][j+1][0] == 0 and playground[i+1][j+1][1] == 0:
-                        if [i + 1, j + 1] not in uncover:
-                            uncover.append([i + 1, j + 1])
-                    playground[i + 1][j + 1][1] = 1
-                uncover.pop(0)*/
+void reveal_part(mines *m, queue_t *que, int idx){
+    if (m->data[idx] == 0 && m->revealed[idx] == 0){
+        if (!contains(que, idx)){
+            push_to_queue(que, idx);
+        }
+    }
+    if(m->revealed[idx] == 0){ //
+        m->revealed[idx] = 1;
+    }
+}
+
+void reveal(mines *m){
+    m->revealed[m->selectedY*10+m->selectedX] = 1;
+    if(m->data[m->selectedY*10+m->selectedX] == 0){
+        queue_t* que = create_queue(100);
+        push_to_queue(que, m->selectedY*10+m->selectedX);
+        while(get_queue_size(que) > 0){
+            int idx = get_from_queue(que, 0);
+            //if idx != -1
+            int i = idx%10;
+            int j = idx/10;
+            if (i != 0){
+                reveal_part(m, que, (j)*10+i-1);
+            }
+            if (i != 9){
+                reveal_part(m, que, (j)*10+i+1);
+            }
+            if (j != 0){
+                reveal_part(m, que, (j-1)*10+i);
+            }
+            if (j != 9){
+                reveal_part(m, que, (j+1)*10+i);
+            }
+            if (i != 0 && j != 0){
+                reveal_part(m, que, (j-1)*10+i-1);
+            }
+            if (i != 0 && j != 9){
+                reveal_part(m, que, (j+1)*10+i-1);
+            }
+            if (i != 9 && j != 0){
+               reveal_part(m, que, (j-1)*10+i+1);
+            }
+            if(i != 9 && j != 9){
+                reveal_part(m, que, (j+1)*10+i+1);
+            }
+            pop_from_queue(que);
+        }
+    }
+}
+
+void place_flag(mines *m){
+    m->revealed[m->selectedY*10+m->selectedX] = 2;
 }
 
 void draw_pixel(int x, int y, unsigned short color)
@@ -240,25 +244,32 @@ void drawField(mines *m){
         {
             for (int horz = 0; horz < 10; horz++)
             {
-                if (1) //(m->revealed[vert*10+horz]) 
+                if (1) //(m->revealed[vert*10+horz] != 0) 
                 {
-                    //shown
-                    if(m->data[vert*10+horz] == -1){
-                        //mine
-                        //printf("drawins %d %d", vert, horz);
-                        //fflush(stdout);
-                        draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x31);
+                    if(m->revealed[vert*10+horz] == 1){
+                        //shown
+                        if(m->data[vert*10+horz] == -1){
+                            //mine
+                            //printf("drawins %d %d", vert, horz);
+                            //fflush(stdout);
+                            draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x31);
+                        }
+                        else{
+                            //number
+                            //printf("drawins %d %d", vert, horz);
+                            //fflush(stdout);
+                            draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x7ff);
+                            print_char((char)(m->data[vert*10+horz]+48), 90 + (vert * 30) + 10, 20 + (horz * 30) + 10, 1, 0x0ff);
+                        }
+                        if(m->selectedX == horz && m->selectedY == vert){
+                            draw_hollow_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 2, 0x00);
+                            //draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x00);
+                        }
                     }
                     else{
-                        //number
-                        //printf("drawins %d %d", vert, horz);
-                        //fflush(stdout);
-                        draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x7ff);
-                        print_char((char)(m->data[vert*10+horz]+48), 90 + (vert * 30) + 10, 20 + (horz * 30) + 10, 1, 0x0ff);
-                    }
-                    if(m->selectedX == horz && m->selectedY == vert){
-                        draw_hollow_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 2, 0x00);
-                        //draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x00);
+                        //draw flag
+                        draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x70f);
+                        print_char((char)('F'), 90 + (vert * 30) + 10, 20 + (horz * 30) + 10, 1, 0x0ff);
                     }
                 }
                 else
@@ -528,11 +539,27 @@ int main(int argc, char *argv[])
 
         // test Aretation
         rotation_t change = get_knob_change(&lastRotation, mem_base); // 1, 2, 3 for R G B knobs
-        if (change.green_change != 0 && change.blue_change != 0 && change.red_change != 0)
+        if (change.red_change || change.green_change || change.blue_change ||
+        change.red_pressed || change.green_pressed || change.blue_pressed)
         {
             //TODO: on change, change selection in mines, on red click reveal, on green click place flag
             printf("Change: %d %d %d", change.red_change, change.blue_change, change.green_change);
             fflush(stdout);
+
+            m->selectedX = (m->selectedX + change.red_change) % 10;
+            m->selectedY = (m->selectedY + change.green_change) % 10;
+            if(m->selectedX < 0){
+                m->selectedX = 0; //+10 for overlap
+            }
+            if(m->selectedY < 0){
+                m->selectedY = 0; //+10 for overlap
+            }
+            if(change.red_pressed){
+                reveal(m);
+            }
+            if(change.green_pressed){
+                place_flag(m);
+            }
         }
 
         for (ptr = 0; ptr < 320 * 480; ptr++)
