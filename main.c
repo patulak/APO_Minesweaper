@@ -82,7 +82,7 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
     //Red knob
     if (knob_value.red_old > knob_value.red_new)
     {
-      if ((knob_value.red_old - knob_value.red_new) <= 118)
+      if ((knob_value.red_old - knob_value.red_new) <= 128)
       {
         result.red_change = 1;
         *lastRotation += (4 << RED_KNOB);
@@ -119,7 +119,7 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
     //Green knob
     if (knob_value.green_old > knob_value.green_new)
     {
-      if ((knob_value.green_old - knob_value.green_new) <= 118)
+      if ((knob_value.green_old - knob_value.green_new) <= 128)
       {
         result.green_change = 1;
         *lastRotation += (4 << GREEN_KNOB);
@@ -156,15 +156,15 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
     //Blue knob
     if (knob_value.blue_old > knob_value.blue_new)
     {
-      if ((knob_value.blue_old - knob_value.blue_new) <= 118)
+      if ((knob_value.blue_old - knob_value.blue_new) <= 128)
       {
         result.blue_change = 1;
-        *lastRotation += (4) >> BLUE_KNOB;
+        *lastRotation += (4 << BLUE_KNOB);
       }
       else
       {
         result.blue_change = -1;
-        *lastRotation -= (4) >> BLUE_KNOB;
+        *lastRotation -= (4 << BLUE_KNOB);
       }
     }
     else if (knob_value.blue_old < knob_value.blue_new)
@@ -172,12 +172,12 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
       if ((knob_value.blue_new - knob_value.blue_old) <= 128)
       {
         result.blue_change = -1;
-        *lastRotation -= (4) >> BLUE_KNOB;
+        *lastRotation -= (4 << BLUE_KNOB);
       }
       else
       {
         result.blue_change = 1;
-        *lastRotation += (4) >> BLUE_KNOB;
+        *lastRotation += (4 << BLUE_KNOB);
       }
     }
     else
