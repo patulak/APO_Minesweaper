@@ -109,7 +109,7 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
     result.blue_click = (currentRotation >> BLUE_CLICK & 0x1) == 1;
 
     //Red knob
-    if (knob_value.red_old > knob_value.red_new)
+    if ((knob_value.red_old - 3) > knob_value.red_new)
     {
       if ((knob_value.red_old - knob_value.red_new) <= 128)
       {
@@ -120,69 +120,60 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
       {
         result.red_change = -1;
         *lastRotation -= (4 << RED_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
       }
     }
-    else if (knob_value.red_old < knob_value.red_new)
+    else if ((knob_value.red_old + 3) < knob_value.red_new)
     {
       if ((knob_value.red_new - knob_value.red_old) <= 128)
       {
         result.red_change = -1;
         *lastRotation -= (4 << RED_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
       }
       else
       {
         result.red_change = 1;
         *lastRotation += (4 << RED_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
       }
     }
     else
     {
       result.red_change = 0;
-      //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
     }
 
     //Green knob
-    if (knob_value.green_old > knob_value.green_new)
+    if ((knob_value.green_old - 3) > knob_value.green_new)
     {
       if ((knob_value.green_old - knob_value.green_new) <= 128)
       {
         result.green_change = 1;
         *lastRotation += (4 << GREEN_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
       }
       else
       {
         result.green_change = -1;
         *lastRotation -= (4 << GREEN_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
       }
     }
-    else if (knob_value.green_old < knob_value.green_new)
+    else if ((knob_value.green_old + 3) < knob_value.green_new)
     {
       if ((knob_value.green_new - knob_value.green_old) <= 128)
       {
         result.green_change = -1;
         *lastRotation -= (4 << GREEN_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
       }
       else
       {
         result.green_change = 1;
         *lastRotation += (4 << GREEN_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
       }
     }
     else
     {
       result.green_change = 0;
-      //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
     }
 
     //Blue knob
-    if (knob_value.blue_old > knob_value.blue_new)
+    if ((knob_value.blue_old - 3) > knob_value.blue_new)
     {
       if ((knob_value.blue_old - knob_value.blue_new) <= 128)
       {
@@ -195,7 +186,7 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
         *lastRotation -= (4 << BLUE_KNOB);
       }
     }
-    else if (knob_value.blue_old < knob_value.blue_new)
+    else if ((knob_value.blue_old + 3) < knob_value.blue_new)
     {
       if ((knob_value.blue_new - knob_value.blue_old) <= 128)
       {
@@ -286,45 +277,53 @@ void reveal_part(mines *m, queue_t *que, int idx){
     if(m->revealed[idx] == 0){ //
         m->revealed[idx] = 1;
     }
+    m->score++;
 }
 
-void reveal(mines *m){
-    m->revealed[m->selectedY*10+m->selectedX] = 1;
-    if(m->data[m->selectedY*10+m->selectedX] == 0){
-        queue_t* que = create_queue(100);
-        push_to_queue(que, m->selectedY*10+m->selectedX);
-        while(get_queue_size(que) > 0){
-            int idx = get_from_queue(que, 0);
-            //if idx != -1
-            int i = idx%10;
-            int j = idx/10;
-            if (i != 0){
-                reveal_part(m, que, (j)*10+i-1);
+bool reveal(mines *m){
+    bool result = false;
+    if(m->data[m->selectedY*10+m->selectedX] == -1){
+        result = true;
+    }
+    else{
+        m->revealed[m->selectedY*10+m->selectedX] = 1;
+        if(m->data[m->selectedY*10+m->selectedX] == 0){
+            queue_t* que = create_queue(100);
+            push_to_queue(que, m->selectedY*10+m->selectedX);
+            while(get_queue_size(que) > 0){
+                int idx = get_from_queue(que, 0);
+                //if idx != -1
+                int i = idx%10;
+                int j = idx/10;
+                if (i != 0){
+                    reveal_part(m, que, (j)*10+i-1);
+                }
+                if (i != 9){
+                    reveal_part(m, que, (j)*10+i+1);
+                }
+                if (j != 0){
+                    reveal_part(m, que, (j-1)*10+i);
+                }
+                if (j != 9){
+                    reveal_part(m, que, (j+1)*10+i);
+                }
+                if (i != 0 && j != 0){
+                    reveal_part(m, que, (j-1)*10+i-1);
+                }
+                if (i != 0 && j != 9){
+                    reveal_part(m, que, (j+1)*10+i-1);
+                }
+                if (i != 9 && j != 0){
+                reveal_part(m, que, (j-1)*10+i+1);
+                }
+                if(i != 9 && j != 9){
+                    reveal_part(m, que, (j+1)*10+i+1);
+                }
+                pop_from_queue(que);
             }
-            if (i != 9){
-                reveal_part(m, que, (j)*10+i+1);
-            }
-            if (j != 0){
-                reveal_part(m, que, (j-1)*10+i);
-            }
-            if (j != 9){
-                reveal_part(m, que, (j+1)*10+i);
-            }
-            if (i != 0 && j != 0){
-                reveal_part(m, que, (j-1)*10+i-1);
-            }
-            if (i != 0 && j != 9){
-                reveal_part(m, que, (j+1)*10+i-1);
-            }
-            if (i != 9 && j != 0){
-               reveal_part(m, que, (j-1)*10+i+1);
-            }
-            if(i != 9 && j != 9){
-                reveal_part(m, que, (j+1)*10+i+1);
-            }
-            pop_from_queue(que);
         }
     }
+    return result;
 }
 
 void place_flag(mines *m){
@@ -404,10 +403,6 @@ void drawField(mines *m){
         {
             for (int horz = 0; horz < 10; horz++)
             {
-                if (m->revealed[vert*10+horz] == 2) {
-                    printf("%d", m->revealed[vert*10+horz]);
-                    fflush(stdout);
-                }
                 if (m->revealed[vert*10+horz] != 0) 
                 {   
                     
@@ -429,8 +424,6 @@ void drawField(mines *m){
                     }
                     else{
                         //draw flag
-                        printf("Drawed flag");
-                        fflush(stdout);
                         draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x70f);
                         print_char((char)('F'), 90 + (vert * 30) + 10, 20 + (horz * 30) + 10, 1, 0x0ff);
                     }
@@ -448,17 +441,29 @@ void drawField(mines *m){
         }
 }
 
+bool checkWin(mines *m){
+    return false;
+}
+void showScore(mines *m){
 
-void set_rgb1(int val)
+}
+
+void set_rgb1(int val, unsigned char * mem_base)
 {
-    int *rgb1 = (int *)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB1_o);
+    int *rgb1 = (int *)(mem_base + SPILED_REG_LED_RGB1_o);
     *rgb1 = val;
 }
 
-void set_rgb2(int val)
+void set_rgb2(int val, unsigned char * mem_base)
 {
-    int *rgb2 = (int *)(SPILED_REG_BASE_PHYS + SPILED_REG_LED_RGB2_o);
+    int *rgb2 = (int *)(mem_base + SPILED_REG_LED_RGB2_o);
     *rgb2 = val;
+}
+
+void set_leds(int val, unsigned char * mem_base)
+{
+    int *leds = (int *)(mem_base + SPILED_REG_LED_LINE_o);
+    *leds = val;
 }
 
 int pready()
@@ -520,7 +525,7 @@ int main(int argc, char *argv[])
     
     mines *m = malloc(sizeof(mines));
     m->data = malloc(sizeof(int) * 100);
-    m->revealed = malloc(sizeof(bool) * 100);
+    m->revealed = malloc(sizeof(int) * 100);
 
     for (int i = 0; i < 100; i++)
     {
@@ -572,46 +577,67 @@ int main(int argc, char *argv[])
     loop_delay.tv_sec = 0;
     loop_delay.tv_nsec = 150 * 1000 * 1000;
     // int xx=0, yy=0;
+    int gameStage = 0;
+    set_rgb1(124, mem_base);
+    set_rgb2(50, mem_base);
+    set_leds(5465, mem_base);
+    printf("Leds good");
+    fflush(stdout);
     while (1)
     {
+        if(gameStage == 0){
+            // test Aretation
+            rotation_t change = get_knob_change(&lastRotation, mem_base); // 1, 2, 3 for R G B knobs
+            if (change.red_change || change.green_change || change.blue_change || change.red_click || change.green_click || change.blue_click)
+            {
+                //TODO: on change, change selection in mines, on red click reveal, on green click place flag
+                //printf("Change: %d %d %d", change.red_change, change.blue_change, change.green_change);
+                //fflush(stdout);
 
-        // test Aretation
-        rotation_t change = get_knob_change(&lastRotation, mem_base); // 1, 2, 3 for R G B knobs
-        if (change.red_change || change.green_change || change.blue_change || change.red_click || change.green_click || change.blue_click)
-        {
-            //TODO: on change, change selection in mines, on red click reveal, on green click place flag
-            //printf("Change: %d %d %d", change.red_change, change.blue_change, change.green_change);
-            //fflush(stdout);
+                m->selectedX = (m->selectedX + change.green_change);
+                m->selectedY = (m->selectedY + change.red_change);
+                if(m->selectedX > 9){
+                    m->selectedX = 9;
+                }
+                if(m->selectedX < 0){
+                    m->selectedX = 0; //+10 for overlap
+                }
+                if(m->selectedY > 9){
+                    m->selectedY = 9;
+                }
+                if(m->selectedY < 0){
+                    m->selectedY = 0; //+10 for overlap
+                }
+                if(change.red_click){
+                    if(reveal(m)){
+                        gameStage = 2;
+                    };
+                }
+                if(change.green_click){
+                    place_flag(m);
+                }
+            }
 
-            m->selectedX = (m->selectedX + change.green_change);
-            m->selectedY = (m->selectedY + change.red_change);
-            if(m->selectedX > 9){
-                m->selectedX = 9;
+            for (ptr = 0; ptr < 320 * 480; ptr++)
+            {
+                fb[ptr] = 0u;
             }
-            if(m->selectedX < 0){
-                m->selectedX = 0; //+10 for overlap
-            }
-            if(m->selectedY > 9){
-                m->selectedY = 9;
-            }
-            if(m->selectedY < 0){
-                m->selectedY = 0; //+10 for overlap
-            }
-            if(change.red_click){
-                reveal(m);
-            }
-            if(change.green_click){
-                place_flag(m);
+            // draw square on x, y
+
+            drawField(m);
+            showScore(m);
+            if(checkWin(m)){
+                gameStage = 1;
             }
         }
-
-        for (ptr = 0; ptr < 320 * 480; ptr++)
-        {
-            fb[ptr] = 0u;
+        if(gameStage == 1){ //won - menu to start again
+            printf("YOU WON!");
+            fflush(stdout);
         }
-        // draw square on x, y
-
-        drawField(m);
+        if(gameStage == 2){ //lost - menu to start again
+            printf("YOU LOST!");
+            fflush(stdout);
+        }
         //printf("Drawed field\n");
         //fflush(stdout);
 
