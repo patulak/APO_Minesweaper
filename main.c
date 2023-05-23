@@ -19,6 +19,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <termios.h>            //termios, TCSANOW, ECHO, ICANON
+#include <stdbool.h>
 
 #include "mzapo_parlcd.h"
 #include "mzapo_phys.h"
@@ -51,6 +52,10 @@ typedef struct
   uint8_t red_new;
   uint8_t green_new;
   uint8_t blue_new;
+
+  bool red_click;
+  bool green_click;
+  bool blue_click;
 }knob_value;
 
 
@@ -67,6 +72,10 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
 
     uint32_t currentRotation = get_knobs(mem_base);
 
+    knob_value.red_click = false;
+    knob_value.green_click = false;
+    knob_value.blue_click = false;
+
     knob_value.red_new = (*lastRotation >> RED_KNOB) & 0xFF; //Previous position
     knob_value.green_new = (*lastRotation >> GREEN_KNOB) & 0xFF; //Previous position
     knob_value.blue_new = (*lastRotation >> BLUE_KNOB) & 0xFF; //Previous position
@@ -79,82 +88,76 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
     result.green_change = 0;
     result.blue_change = 0;
 
+    knob_value.red_click = (currentRotation >> RED_CLICK & 0x1) == 1;
+    knob_value.green_click = (currentRotation >> GREEN_CLICK & 0x1) == 1;
+    knob_value.blue_click = (currentRotation >> BLUE_CLICK & 0x1) == 1;
+
     //Red knob
-    if (knob_value.red_old > knob_value.red_new)
+    if ((knob_value.red_old - 3) > knob_value.red_new)
     {
       if ((knob_value.red_old - knob_value.red_new) <= 128)
       {
         result.red_change = 1;
         *lastRotation += (4 << RED_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
       }
       else
       {
         result.red_change = -1;
         *lastRotation -= (4 << RED_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
       }
     }
-    else if (knob_value.red_old < knob_value.red_new)
+    else if ((knob_value.red_old + 3) < knob_value.red_new)
     {
       if ((knob_value.red_new - knob_value.red_old) <= 128)
       {
         result.red_change = -1;
         *lastRotation -= (4 << RED_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
       }
       else
       {
         result.red_change = 1;
         *lastRotation += (4 << RED_KNOB);
-        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
       }
     }
     else
     {
       result.red_change = 0;
-      //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
     }
 
     //Green knob
-    if (knob_value.green_old > knob_value.green_new)
+    if ((knob_value.green_old - 3) > knob_value.green_new)
     {
       if ((knob_value.green_old - knob_value.green_new) <= 128)
       {
         result.green_change = 1;
         *lastRotation += (4 << GREEN_KNOB);
-        printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
       }
       else
       {
         result.green_change = -1;
         *lastRotation -= (4 << GREEN_KNOB);
-        printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
       }
     }
-    else if (knob_value.green_old < knob_value.green_new)
+    else if ((knob_value.green_old + 3) < knob_value.green_new)
     {
       if ((knob_value.green_new - knob_value.green_old) <= 128)
       {
         result.green_change = -1;
         *lastRotation -= (4 << GREEN_KNOB);
-        printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
       }
       else
       {
         result.green_change = 1;
         *lastRotation += (4 << GREEN_KNOB);
-        printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
       }
     }
     else
     {
       result.green_change = 0;
-      printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
     }
 
     //Blue knob
-    if (knob_value.blue_old > knob_value.blue_new)
+    if ((knob_value.blue_old - 3) > knob_value.blue_new)
     {
       if ((knob_value.blue_old - knob_value.blue_new) <= 128)
       {
@@ -167,7 +170,7 @@ rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: lef
         *lastRotation -= (4 << BLUE_KNOB);
       }
     }
-    else if (knob_value.blue_old < knob_value.blue_new)
+    else if ((knob_value.blue_old + 3) < knob_value.blue_new)
     {
       if ((knob_value.blue_new - knob_value.blue_old) <= 128)
       {
