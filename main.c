@@ -276,8 +276,9 @@ void reveal_part(mines *m, queue_t *que, int idx){
     }
     if(m->revealed[idx] == 0){ //
         m->revealed[idx] = 1;
+        m->score++;
     }
-    m->score++;
+    
 }
 
 bool reveal(mines *m){
@@ -445,7 +446,37 @@ bool checkWin(mines *m){
     return false;
 }
 void showScore(mines *m){
-
+    char text[20];
+    int scale = 1;
+    int x = 50;
+    int y = 0;
+    short color = 0x7ff;
+    sprintf(text, "Score :%d&", m->score);
+    for(int let = 0; let < 20; let++){
+        char c = text[let];
+        if(c == '&'){
+            break;
+        }
+        if(c < font_winFreeSystem14x16.firstchar || c >= font_winFreeSystem14x16.size - font_winFreeSystem14x16.firstchar){
+            c = font_winFreeSystem14x16.defaultchar;
+        }
+        int off = c - font_winFreeSystem14x16.firstchar;
+        const uint16_t *cb = font_winFreeSystem14x16.bits + (font_winFreeSystem14x16.height * off);
+        for(int i = 0; i < font_winFreeSystem14x16.height; i++){
+            for(int j = 0; j < (int)(font_winFreeSystem14x16.width[off]); j++){
+                if(cb[i] & (0x1 << (15 - j))){
+                    int px = x + (j * scale);
+                    int py = y + (i * scale);
+                    for(int xi = 0; xi < scale; xi++){
+                        for(int xj = 0; xj < scale; xj++){
+                            draw_pixel(px+xj, py+xi, color);
+                        }
+                    }
+                }
+            }
+        }
+        x += (int)(font_winFreeSystem14x16.width[off]);
+    }
 }
 
 void set_rgb1(int val, unsigned char * mem_base)
@@ -506,7 +537,17 @@ union pixel
 };
 
 
-
+unsigned int reverseBits(unsigned int num)
+{
+    unsigned int NO_OF_BITS = sizeof(num) * 8;
+    unsigned int reverse_num = 0;
+    int i;
+    for (i = 0; i < NO_OF_BITS; i++) {
+        if ((num & (1 << i)))
+            reverse_num |= 1 << ((NO_OF_BITS - 1) - i);
+    }
+    return reverse_num;
+}
 
 
 int main(int argc, char *argv[])
@@ -580,7 +621,7 @@ int main(int argc, char *argv[])
     int gameStage = 0;
     set_rgb1(124, mem_base);
     set_rgb2(50, mem_base);
-    set_leds(5465, mem_base);
+    
     printf("Leds good");
     fflush(stdout);
     while (1)
@@ -626,16 +667,26 @@ int main(int argc, char *argv[])
 
             drawField(m);
             showScore(m);
+            float level = (m->score/100.0) * 32;
+            int reg = 0;
+            reg = ~(reg & 0);
+            reg = ~(reg << (int)level);
+            reg = reverseBits(reg);
+            set_leds(reg, mem_base);
             if(checkWin(m)){
                 gameStage = 1;
             }
         }
         if(gameStage == 1){ //won - menu to start again
             printf("YOU WON!");
+            set_rgb1(2016, mem_base);
+            set_rgb2(2016, mem_base);
             fflush(stdout);
         }
         if(gameStage == 2){ //lost - menu to start again
             printf("YOU LOST!");
+            set_rgb1(31, mem_base);
+            set_rgb2(31, mem_base);
             fflush(stdout);
         }
         //printf("Drawed field\n");
