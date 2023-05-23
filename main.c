@@ -32,31 +32,189 @@
 
 unsigned short *fb;
 
+#define RED_KNOB 16
+#define GREEN_KNOB 8
+#define BLUE_KNOB 0
+
+#define RED_CLICK 26
+#define GREEN_CLICK 25
+#define BLUE_CLICK 24
+
 typedef struct
 {
-    int *data; //0 - 8 bomb count, -1 bomb, -2 flag
-    int *revealed; //0 hidden, 1 revealed, 2 flag
+    int red_change;
+    int blue_change;
+    int green_change;
+
+    bool red_click;
+    bool green_click;
+    bool blue_click;
+
+}rotation_t;
+
+typedef struct
+{
+  uint8_t red_old;
+  uint8_t green_old;
+  uint8_t blue_old;
+
+  uint8_t red_new;
+  uint8_t green_new;
+  uint8_t blue_new;
+
+  
+}knob_value;
+
+
+typedef struct
+{
+    int *data; //0 - 8 bomb count, -1 bomb
+    int *revealed; //0 - hidden, 1 - shown, 2- flag
     int selectedX;
     int selectedY;
     int score;
 } mines;
 
-typedef struct
-{
-    int red_change;
-    int green_change;
-    int blue_change;
-    bool red_pressed;
-    bool green_pressed;
-    bool blue_pressed;
-} rotation_t;
+int get_knobs(unsigned char *mem_base) //int 0-256
+{  
+    volatile uint32_t* knobs = (volatile uint32_t*)(mem_base + SPILED_REG_KNOBS_8BIT_o);
+    return *knobs;
+}
 
-typedef struct
-{
-  uint8_t red_value;
-  uint8_t green_value;
-  uint8_t blue_value;
-}knob_value;
+rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: left, 0: same, 1: right
+{ 
+    rotation_t result;
+    knob_value knob_value;
+
+    uint32_t currentRotation = get_knobs(mem_base);
+
+    result.red_click = false;
+    result.green_click = false;
+    result.blue_click = false;
+
+    knob_value.red_new = (*lastRotation >> RED_KNOB) & 0xFF; //Previous position
+    knob_value.green_new = (*lastRotation >> GREEN_KNOB) & 0xFF; //Previous position
+    knob_value.blue_new = (*lastRotation >> BLUE_KNOB) & 0xFF; //Previous position
+
+    knob_value.red_old = (currentRotation >> RED_KNOB) & 0xFF; //Current position
+    knob_value.green_old = (currentRotation >> GREEN_KNOB) & 0xFF; //Current position
+    knob_value.blue_old = (currentRotation >> BLUE_KNOB) & 0xFF; //Current position
+
+    result.red_change = 0;
+    result.green_change = 0;
+    result.blue_change = 0;
+
+    result.red_click = (currentRotation >> RED_CLICK & 0x1) == 1;
+    result.green_click = (currentRotation >> GREEN_CLICK & 0x1) == 1;
+    result.blue_click = (currentRotation >> BLUE_CLICK & 0x1) == 1;
+
+    //Red knob
+    if (knob_value.red_old > knob_value.red_new)
+    {
+      if ((knob_value.red_old - knob_value.red_new) <= 128)
+      {
+        result.red_change = 1;
+        *lastRotation += (4 << RED_KNOB);
+      }
+      else
+      {
+        result.red_change = -1;
+        *lastRotation -= (4 << RED_KNOB);
+        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
+      }
+    }
+    else if (knob_value.red_old < knob_value.red_new)
+    {
+      if ((knob_value.red_new - knob_value.red_old) <= 128)
+      {
+        result.red_change = -1;
+        *lastRotation -= (4 << RED_KNOB);
+        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
+      }
+      else
+      {
+        result.red_change = 1;
+        *lastRotation += (4 << RED_KNOB);
+        //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
+      }
+    }
+    else
+    {
+      result.red_change = 0;
+      //printf("Current: %d | Last: %d\n", knob_value.red_old, knob_value.red_new);
+    }
+
+    //Green knob
+    if (knob_value.green_old > knob_value.green_new)
+    {
+      if ((knob_value.green_old - knob_value.green_new) <= 128)
+      {
+        result.green_change = 1;
+        *lastRotation += (4 << GREEN_KNOB);
+        //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
+      }
+      else
+      {
+        result.green_change = -1;
+        *lastRotation -= (4 << GREEN_KNOB);
+        //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
+      }
+    }
+    else if (knob_value.green_old < knob_value.green_new)
+    {
+      if ((knob_value.green_new - knob_value.green_old) <= 128)
+      {
+        result.green_change = -1;
+        *lastRotation -= (4 << GREEN_KNOB);
+        //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
+      }
+      else
+      {
+        result.green_change = 1;
+        *lastRotation += (4 << GREEN_KNOB);
+        //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
+      }
+    }
+    else
+    {
+      result.green_change = 0;
+      //printf("Current: %d | Last: %d\n", knob_value.green_old, knob_value.green_new);
+    }
+
+    //Blue knob
+    if (knob_value.blue_old > knob_value.blue_new)
+    {
+      if ((knob_value.blue_old - knob_value.blue_new) <= 128)
+      {
+        result.blue_change = 1;
+        *lastRotation += (4 << BLUE_KNOB);
+      }
+      else
+      {
+        result.blue_change = -1;
+        *lastRotation -= (4 << BLUE_KNOB);
+      }
+    }
+    else if (knob_value.blue_old < knob_value.blue_new)
+    {
+      if ((knob_value.blue_new - knob_value.blue_old) <= 128)
+      {
+        result.blue_change = -1;
+        *lastRotation -= (4 << BLUE_KNOB);
+      }
+      else
+      {
+        result.blue_change = 1;
+        *lastRotation += (4 << BLUE_KNOB);
+      }
+    }
+    else
+    {
+      result.blue_change = 0;
+    }
+
+    return result;
+}
 
 void generate(mines *m){
     /*randomly generates playfield*/
@@ -170,7 +328,9 @@ void reveal(mines *m){
 }
 
 void place_flag(mines *m){
-    m->revealed[m->selectedY*10+m->selectedX] = 2;
+    printf("Placed flag on %d, %d", m->selectedX, m->selectedY);
+    fflush(stdout);
+    m->revealed[((m->selectedY) * 10) + m->selectedX] = 2;
 }
 
 void draw_pixel(int x, int y, unsigned short color)
@@ -244,8 +404,13 @@ void drawField(mines *m){
         {
             for (int horz = 0; horz < 10; horz++)
             {
-                if (1) //(m->revealed[vert*10+horz] != 0) 
-                {
+                if (m->revealed[vert*10+horz] == 2) {
+                    printf("%d", m->revealed[vert*10+horz]);
+                    fflush(stdout);
+                }
+                if (m->revealed[vert*10+horz] != 0) 
+                {   
+                    
                     if(m->revealed[vert*10+horz] == 1){
                         //shown
                         if(m->data[vert*10+horz] == -1){
@@ -261,13 +426,11 @@ void drawField(mines *m){
                             draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x7ff);
                             print_char((char)(m->data[vert*10+horz]+48), 90 + (vert * 30) + 10, 20 + (horz * 30) + 10, 1, 0x0ff);
                         }
-                        if(m->selectedX == horz && m->selectedY == vert){
-                            draw_hollow_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 2, 0x00);
-                            //draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x00);
-                        }
                     }
                     else{
                         //draw flag
+                        printf("Drawed flag");
+                        fflush(stdout);
                         draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x70f);
                         print_char((char)('F'), 90 + (vert * 30) + 10, 20 + (horz * 30) + 10, 1, 0x0ff);
                     }
@@ -277,139 +440,14 @@ void drawField(mines *m){
                     //hidden
                     draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x0f0);
                 }
+                if(m->selectedX == horz && m->selectedY == vert){
+                    draw_hollow_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 2, 0x00);
+                    //draw_square(90 + (vert * 30), 20 + (horz * 30), 30, 30, 0x00);
+                }
             }
         }
 }
 
-
-int get_knobs(unsigned char *mem_base)
-{ // int 0-256
-    int *knobs = (int *)(mem_base + SPILED_REG_KNOBS_8BIT_o);
-    return *knobs;
-}
-
-rotation_t get_knob_change(int *lastRotation, unsigned char* mem_base) //-1: left, 0: same, 1: right
-{ 
-    /*TODO: rotations and buttons*/
-    rotation_t result;
-    knob_value knob_value;
-
-    uint8_t currentRotation = get_knobs(mem_base);
-
-    uint8_t red_value = ((*lastRotation) >> 16) & 0xff; //Previous position
-    uint8_t green_value = ((*lastRotation) >> 8) & 0xff; //Previous position
-    uint8_t blue_value = (*lastRotation) & 0xff; //Previous position
-
-    knob_value.red_value = (currentRotation >> 16) & 0xff; //Current position
-    knob_value.green_value = (currentRotation >> 8) & 0xff; //Current position
-    knob_value.blue_value = (currentRotation) & 0xff; //Current position
-
-    printf("R:%d / %d, G:%d / %d, B:%d / %d\n", red_value, knob_value.red_value, green_value, knob_value.green_value, blue_value, knob_value.blue_value);
-    fflush(stdout);
-
-    result.red_change = 0;
-    result.green_change = 0;
-    result.blue_change = 0;
-
-    //Red knob
-    if (knob_value.red_value > red_value)
-    {
-      if ((knob_value.red_value - red_value) <= 3)
-      {
-        result.red_change = 1;
-        //*lastRotation += (4) >> 16;
-      }
-      else
-      {
-        result.red_change = -1;
-        //*lastRotation -= (4) >> 16;
-      }
-    }
-    else if (knob_value.red_value < red_value)
-    {
-      if ((red_value - knob_value.red_value) <= 3)
-      {
-        result.red_change = -1;
-        //*lastRotation -= (4) >> 16;
-      }
-      else
-      {
-        result.red_change = 1;
-        //*lastRotation += (4) >> 16;
-      }
-    }
-    else
-    {
-      result.red_change = 0;
-    }
-
-    //Green knob
-    if (knob_value.green_value > green_value)
-    {
-      if ((knob_value.green_value - green_value) <= 3)
-      {
-        result.green_change = 1;
-        //*lastRotation += (4) >> 8;
-      }
-      else
-      {
-        result.green_change = -1;
-        //*lastRotation -= (4) >> 8;
-      }
-    }
-    else if (knob_value.green_value < green_value)
-    {
-      if ((green_value - knob_value.green_value) <= 3)
-      {
-        result.green_change = -1;
-        //*lastRotation -= (4) >> 8;
-      }
-      else
-      {
-        result.green_change = 1;
-        //*lastRotation += (4) >> 8;
-      }
-    }
-    else
-    {
-      result.green_change = 0;
-    }
-
-    //Blue knob
-    if (knob_value.blue_value > blue_value)
-    {
-      if ((knob_value.blue_value - blue_value) <= 3)
-      {
-        result.blue_change = 1;
-        //*lastRotation += (4) >> 0;
-      }
-      else
-      {
-        result.blue_change = -1;
-        //*lastRotation -= (4) >> 0;
-      }
-    }
-    else if (knob_value.blue_value < blue_value)
-    {
-      if ((blue_value - knob_value.blue_value) <= 3)
-      {
-        result.blue_change = -1;
-        //*lastRotation -= (4) >> 0;
-      }
-      else
-      {
-        result.blue_change = 1;
-        //*lastRotation += (4) >> 0;
-      }
-    }
-    else
-    {
-      result.blue_change = 0;
-    }
-    *lastRotation = currentRotation;
-
-    return result;
-}
 
 void set_rgb1(int val)
 {
@@ -539,25 +577,30 @@ int main(int argc, char *argv[])
 
         // test Aretation
         rotation_t change = get_knob_change(&lastRotation, mem_base); // 1, 2, 3 for R G B knobs
-        if (change.red_change || change.green_change || change.blue_change ||
-        change.red_pressed || change.green_pressed || change.blue_pressed)
+        if (change.red_change || change.green_change || change.blue_change || change.red_click || change.green_click || change.blue_click)
         {
             //TODO: on change, change selection in mines, on red click reveal, on green click place flag
-            printf("Change: %d %d %d", change.red_change, change.blue_change, change.green_change);
-            fflush(stdout);
+            //printf("Change: %d %d %d", change.red_change, change.blue_change, change.green_change);
+            //fflush(stdout);
 
-            m->selectedX = (m->selectedX + change.red_change) % 10;
-            m->selectedY = (m->selectedY + change.green_change) % 10;
+            m->selectedX = (m->selectedX + change.green_change);
+            m->selectedY = (m->selectedY + change.red_change);
+            if(m->selectedX > 9){
+                m->selectedX = 9;
+            }
             if(m->selectedX < 0){
                 m->selectedX = 0; //+10 for overlap
+            }
+            if(m->selectedY > 9){
+                m->selectedY = 9;
             }
             if(m->selectedY < 0){
                 m->selectedY = 0; //+10 for overlap
             }
-            if(change.red_pressed){
+            if(change.red_click){
                 reveal(m);
             }
-            if(change.green_pressed){
+            if(change.green_click){
                 place_flag(m);
             }
         }
