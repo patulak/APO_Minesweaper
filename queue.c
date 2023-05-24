@@ -35,7 +35,6 @@ bool push_to_queue(queue_t *queue, int data)
 
 int pop_from_queue(queue_t *queue)
 {
-    //printf("(%d,%d) %d, %d\n", queue->head,queue->tail, queue->count, queue->nodes[queue->tail]);
     if(queue->head == queue->tail){
         return -1;
     }
