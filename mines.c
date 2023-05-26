@@ -123,6 +123,7 @@ bool reveal(mines *m){
                 }
                 pop_from_queue(que);
             }
+            delete_queue(que);
         }
     }
     return result;
