@@ -231,7 +231,9 @@ int main(int argc, char *argv[])
     {
         parlcd_write_data(parlcd_mem_base, 0);
     }
-
+    free(m->revealed);
+    free(m->data);
+    free(m);
     printf("Goodbye world\n");
     serialize_unlock();
 
